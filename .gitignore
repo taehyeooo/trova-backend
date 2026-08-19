@@ -33,6 +33,8 @@ bin/
 
 ### Env / secrets ###
 .env
+application-local.yml
+application-*.local.yml
 pipeline-test/work/
 
 ### Python ###

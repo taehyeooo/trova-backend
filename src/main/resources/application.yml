@@ -13,6 +13,8 @@ spring:
           google:
             client-id: ${GOOGLE_CLIENT_ID}
             client-secret: ${GOOGLE_CLIENT_SECRET}
+            # openid를 절대 추가하지 말 것: OIDC 경로(OidcUserService)로 로그인이 처리되면서
+            # CustomOAuth2UserService가 통째로 건너뛰어져 사용자 upsert가 조용히 동작하지 않게 된다.
             scope: email, profile
           kakao:
             client-id: ${KAKAO_CLIENT_ID}

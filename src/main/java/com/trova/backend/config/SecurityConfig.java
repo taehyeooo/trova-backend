@@ -6,6 +6,7 @@ import com.trova.backend.security.OAuth2LoginSuccessHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -39,8 +40,13 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 세션 쿠키 기반 API + 별도 origin 프론트 조합이라 CSRF는 우선 비활성화.
-                // 상태 변경 엔드포인트(POST /api/shares 등)를 붙이는 다음 스펙에서 재검토 필요.
+                // 세션 쿠키 기반 API + 별도 origin 프론트 조합이라 CSRF는 우선 비활성화한 상태다.
+                // 단, CSRF 설정자가 없으면 LogoutConfigurer가 로그아웃 매처를 POST뿐 아니라
+                // GET/PUT/DELETE까지 허용하도록 폴백하므로, 타 사이트의 <img src> 한 줄로도
+                // 강제 로그아웃이 가능해진다. 그래서 아래 logout 설정에서 매처를 POST로 명시 고정한다.
+                // 로그아웃 외의 상태 변경 엔드포인트(POST /api/shares 등)를 추가하기 전에,
+                // 특히 SameSite=None으로 크로스 사이트 세션 쿠키가 오가는 운영 배포 전에는
+                // 이 영역(CSRF 비활성화 여부 포함)을 반드시 다시 검토해야 한다.
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
@@ -54,7 +60,8 @@ public class SecurityConfig {
                         .failureHandler(oAuth2LoginFailureHandler)
                 )
                 .logout(logout -> logout
-                        .logoutUrl("/api/auth/logout")
+                        .logoutRequestMatcher(PathPatternRequestMatcher.withDefaults()
+                                .matcher(HttpMethod.POST, "/api/auth/logout"))
                         .logoutSuccessHandler((request, response, authentication) ->
                                 response.setStatus(HttpStatus.OK.value()))
                 )

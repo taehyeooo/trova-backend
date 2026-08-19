@@ -25,7 +25,9 @@ public class AuthController {
         );
 
         User user = userRepository.findByProviderAndProviderUserId(info.provider(), info.providerUserId())
-                .orElseThrow(() -> new IllegalStateException("인증된 사용자를 찾을 수 없습니다: " + info));
+                .orElseThrow(() -> new IllegalStateException(
+                        "인증된 사용자를 찾을 수 없습니다: provider=" + info.provider()
+                                + ", providerUserId=" + info.providerUserId()));
 
         return ResponseEntity.ok(new MeResponse(user.getId(), user.getNickname(), user.getProfileImageUrl()));
     }
