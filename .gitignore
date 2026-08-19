@@ -33,6 +33,8 @@ bin/
 
 ### Env / secrets ###
 .env
+application-local.yml
+application-*.local.yml
 pipeline-test/work/
 
 ### Python ###
@@ -43,3 +45,12 @@ __pycache__/
 CLAUDE.md
 PROGRESS.md
 TODO.md
+
+### 격리 워크트리 (subagent-driven-development 등에서 사용) ###
+.worktrees/
+.superpowers/
+
+### Gradle ###
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
