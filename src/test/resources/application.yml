@@ -32,3 +32,5 @@ app:
     script-path: pipeline-test/run_pipeline.py
     work-dir: build/tmp/pipeline-test-work
     gemini-api-key: test-key
+  kakao:
+    rest-api-key: test-kakao-rest-api-key
