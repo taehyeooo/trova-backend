@@ -1,65 +1,54 @@
 package com.trova.backend.service;
 
-import com.trova.backend.entity.ProcessingJob;
-import com.trova.backend.entity.SavedPlace;
 import com.trova.backend.geocoding.GeocodingResult;
 import com.trova.backend.geocoding.KakaoGeocodingService;
 import com.trova.backend.pipeline.ExtractedPlace;
 import com.trova.backend.pipeline.PipelineRunner;
-import com.trova.backend.repository.ProcessingJobRepository;
-import com.trova.backend.repository.SavedPlaceRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
 public class PlaceExtractionService {
 
-    private final ProcessingJobRepository processingJobRepository;
-    private final SavedPlaceRepository savedPlaceRepository;
+    private static final Logger log = LoggerFactory.getLogger(PlaceExtractionService.class);
+
+    private final ProcessingJobLifecycleService lifecycleService;
     private final PipelineRunner pipelineRunner;
     private final KakaoGeocodingService kakaoGeocodingService;
 
     public PlaceExtractionService(
-            ProcessingJobRepository processingJobRepository,
-            SavedPlaceRepository savedPlaceRepository,
+            ProcessingJobLifecycleService lifecycleService,
             PipelineRunner pipelineRunner,
             KakaoGeocodingService kakaoGeocodingService
     ) {
-        this.processingJobRepository = processingJobRepository;
-        this.savedPlaceRepository = savedPlaceRepository;
+        this.lifecycleService = lifecycleService;
         this.pipelineRunner = pipelineRunner;
         this.kakaoGeocodingService = kakaoGeocodingService;
     }
 
     @Async("pipelineTaskExecutor")
-    @Transactional
     public void process(Long jobId) {
-        ProcessingJob job = processingJobRepository.findById(jobId)
-                .orElseThrow(() -> new IllegalStateException("ProcessingJob을 찾을 수 없습니다: " + jobId));
-        job.markProcessing();
-
         try {
-            List<ExtractedPlace> extractedPlaces = pipelineRunner.run(job.getSourceUrl(), job.getId());
+            String sourceUrl = lifecycleService.markProcessing(jobId);
+            log.info("ProcessingJob {} 파이프라인 시작: {}", jobId, sourceUrl);
+
+            List<ExtractedPlace> extractedPlaces = pipelineRunner.run(sourceUrl, jobId);
+            log.info("ProcessingJob {} 파이프라인 완료: {}개 장소 추출", jobId, extractedPlaces.size());
 
             for (ExtractedPlace extracted : extractedPlaces) {
                 GeocodingResult geocoded = kakaoGeocodingService.geocode(extracted.name(), extracted.region());
-                savedPlaceRepository.save(new SavedPlace(
-                        job,
-                        job.getUser(),
-                        extracted.name(),
-                        extracted.region(),
-                        extracted.category(),
-                        geocoded.latitude(),
-                        geocoded.longitude()
-                ));
+                lifecycleService.savePlace(jobId, extracted, geocoded);
             }
 
-            job.markDone();
+            lifecycleService.markDone(jobId);
+            log.info("ProcessingJob {} DONE", jobId);
         } catch (Exception e) {
-            job.markFailed(e.getMessage());
+            log.error("ProcessingJob {} 처리 실패", jobId, e);
+            lifecycleService.markFailed(jobId, e.getMessage());
         }
     }
 }

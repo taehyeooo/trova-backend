@@ -27,7 +27,7 @@ public class ProcessingJob {
     @Column(nullable = false)
     private JobStatus status;
 
-    @Column(name = "error_message")
+    @Column(name = "error_message", length = 2000)
     private String errorMessage;
 
     @Column(name = "retry_count", nullable = false)

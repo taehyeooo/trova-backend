@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.oauth2Login;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -69,6 +70,65 @@ class SharesControllerTest {
                 .andExpect(jsonPath("$.status").value("PENDING"));
 
         org.assertj.core.api.Assertions.assertThat(processingJobRepository.findAll()).hasSize(1);
+        verify(placeExtractionService).process(
+                processingJobRepository.findAll().get(0).getId());
+    }
+
+    @Test
+    void 지원하지_않는_URL이면_400을_반환하고_작업을_만들지_않는다() throws Exception {
+        userRepository.save(new User("google", "1234567890", "테스트유저", null));
+
+        mockMvc.perform(post("/api/shares")
+                        .with(oauth2Login()
+                                .clientRegistration(googleRegistration())
+                                .attributes(attrs -> {
+                                    attrs.put("sub", "1234567890");
+                                    attrs.put("name", "테스트유저");
+                                    attrs.put("picture", "https://example.com/p.jpg");
+                                }))
+                        .contentType("application/json")
+                        .content("{\"url\":\"https://evil.example.com/x\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.assertj.core.api.Assertions.assertThat(processingJobRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void URL_형식이_아니면_400을_반환하고_작업을_만들지_않는다() throws Exception {
+        userRepository.save(new User("google", "1234567890", "테스트유저", null));
+
+        mockMvc.perform(post("/api/shares")
+                        .with(oauth2Login()
+                                .clientRegistration(googleRegistration())
+                                .attributes(attrs -> {
+                                    attrs.put("sub", "1234567890");
+                                    attrs.put("name", "테스트유저");
+                                    attrs.put("picture", "https://example.com/p.jpg");
+                                }))
+                        .contentType("application/json")
+                        .content("{\"url\":\"not a url\"}"))
+                .andExpect(status().isBadRequest());
+
+        org.assertj.core.api.Assertions.assertThat(processingJobRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void url이_없으면_400을_반환하고_작업을_만들지_않는다() throws Exception {
+        userRepository.save(new User("google", "1234567890", "테스트유저", null));
+
+        mockMvc.perform(post("/api/shares")
+                        .with(oauth2Login()
+                                .clientRegistration(googleRegistration())
+                                .attributes(attrs -> {
+                                    attrs.put("sub", "1234567890");
+                                    attrs.put("name", "테스트유저");
+                                    attrs.put("picture", "https://example.com/p.jpg");
+                                }))
+                        .contentType("application/json")
+                        .content("{}"))
+                .andExpect(status().isBadRequest());
+
+        org.assertj.core.api.Assertions.assertThat(processingJobRepository.findAll()).isEmpty();
     }
 
     @Test

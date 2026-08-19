@@ -1,16 +1,26 @@
 package com.trova.backend.pipeline;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Component
 public class PipelineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(PipelineRunner.class);
+
+    private static final long TIMEOUT_MINUTES = 5;
+    private static final long STDOUT_JOIN_TIMEOUT_MILLIS = 30_000;
 
     private final String scriptPath;
     private final String workDirBase;
@@ -31,25 +41,61 @@ public class PipelineRunner {
         ProcessBuilder builder = new ProcessBuilder("python3", scriptPath, url, workDir.toString());
         builder.environment().put("GEMINI_API_KEY", geminiApiKey);
 
+        File stderrFile = null;
         try {
-            Process process = builder.start();
-            String stdout = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-            String stderr = new String(process.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
-            boolean finished = process.waitFor(5, TimeUnit.MINUTES);
+            stderrFile = File.createTempFile("trova-pipeline-", ".stderr");
+            // stderr는 파이프 대신 임시 파일로 보낸다.
+            // (redirectErrorStream(true)를 쓰면 stdout의 JSON이 오염되므로 사용하지 않는다)
+            builder.redirectError(stderrFile);
 
+            Process process = builder.start();
+
+            StringBuilder stdoutBuffer = new StringBuilder();
+            Thread stdoutReader = new Thread(() -> {
+                try (InputStream in = process.getInputStream()) {
+                    stdoutBuffer.append(new String(in.readAllBytes(), StandardCharsets.UTF_8));
+                } catch (IOException e) {
+                    log.warn("ProcessingJob {} 파이프라인 stdout 읽기 실패", jobId, e);
+                }
+            }, "pipeline-stdout-" + jobId);
+            stdoutReader.setDaemon(true);
+            stdoutReader.start();
+
+            boolean finished = process.waitFor(TIMEOUT_MINUTES, TimeUnit.MINUTES);
             if (!finished) {
                 process.destroyForcibly();
+                log.error("ProcessingJob {} 파이프라인 실행 시간 초과({}분): {}", jobId, TIMEOUT_MINUTES, url);
                 throw new PipelineException("파이프라인 실행 시간 초과: " + url);
             }
-            if (process.exitValue() != 0) {
-                throw new PipelineException("파이프라인 실행 실패(exit=" + process.exitValue() + "): " + stderr);
+
+            stdoutReader.join(STDOUT_JOIN_TIMEOUT_MILLIS);
+
+            int exitCode = process.exitValue();
+            if (exitCode != 0) {
+                String stderr = readStderr(stderrFile);
+                log.error("ProcessingJob {} 파이프라인 실행 실패(exit={}): {}", jobId, exitCode, stderr);
+                throw new PipelineException("파이프라인 실행 실패(exit=" + exitCode + "): " + stderr);
             }
-            return PipelineOutputParser.parse(stdout);
+
+            return PipelineOutputParser.parse(stdoutBuffer.toString());
         } catch (IOException e) {
             throw new PipelineException("파이프라인 프로세스 시작 실패: " + e.getMessage(), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new PipelineException("파이프라인 실행 중 인터럽트: " + e.getMessage(), e);
+        } finally {
+            if (stderrFile != null && !stderrFile.delete()) {
+                log.warn("파이프라인 stderr 임시 파일 삭제 실패: {}", stderrFile.getAbsolutePath());
+            }
+        }
+    }
+
+    private String readStderr(File stderrFile) {
+        try {
+            return Files.readString(stderrFile.toPath(), StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            log.warn("파이프라인 stderr 파일 읽기 실패: {}", stderrFile.getAbsolutePath(), e);
+            return "(stderr 읽기 실패: " + e.getMessage() + ")";
         }
     }
 }

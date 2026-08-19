@@ -57,7 +57,7 @@ public class PlacesController {
     @GetMapping
     public List<PlaceResponse> list(OAuth2AuthenticationToken authentication) {
         User user = currentUserService.resolve(authentication);
-        return savedPlaceRepository.findByUserOrderByCreatedAtDesc(user).stream()
+        return savedPlaceRepository.findByUserOrderByCreatedAtDescIdDesc(user).stream()
                 .map(PlaceResponse::from)
                 .toList();
     }

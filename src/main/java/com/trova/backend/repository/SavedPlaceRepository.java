@@ -8,6 +8,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface SavedPlaceRepository extends JpaRepository<SavedPlace, Long> {
-    List<SavedPlace> findByUserOrderByCreatedAtDesc(User user);
+    List<SavedPlace> findByUserOrderByCreatedAtDescIdDesc(User user);
     Optional<SavedPlace> findByIdAndUser(Long id, User user);
 }

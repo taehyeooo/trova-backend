@@ -51,7 +51,7 @@ class SavedPlaceRepositoryTest {
         SavedPlace second = savedPlaceRepository.save(
                 new SavedPlace(job, user, "장소2", null, "cafe", null, null));
 
-        List<SavedPlace> places = savedPlaceRepository.findByUserOrderByCreatedAtDesc(user);
+        List<SavedPlace> places = savedPlaceRepository.findByUserOrderByCreatedAtDescIdDesc(user);
 
         assertThat(places).extracting(SavedPlace::getId)
                 .containsExactly(second.getId(), first.getId());

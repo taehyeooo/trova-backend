@@ -7,7 +7,6 @@ import com.trova.backend.entity.User;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
-import org.springframework.test.context.jdbc.Sql;
 
 import java.util.List;
 
@@ -30,7 +29,7 @@ class ProcessingJobRepositoryTest {
         ProcessingJob newer = processingJobRepository.save(
                 new ProcessingJob(user, "https://youtu.be/b", SourcePlatform.YOUTUBE));
 
-        List<ProcessingJob> jobs = processingJobRepository.findByUserOrderByCreatedAtDesc(user);
+        List<ProcessingJob> jobs = processingJobRepository.findByUserOrderByCreatedAtDescIdDesc(user);
 
         assertThat(jobs).hasSize(2);
         assertThat(jobs.get(0).getId()).isEqualTo(newer.getId());

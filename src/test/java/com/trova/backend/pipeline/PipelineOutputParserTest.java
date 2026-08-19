@@ -34,6 +34,22 @@ class PipelineOutputParserTest {
     }
 
     @Test
+    void 예상하지_못한_필드가_있어도_무시하고_파싱한다() {
+        String stdout = """
+                [
+                  {"name": "장소", "region": null, "category": "cafe", "confidence": 0.9, "evidence": "화면 자막"}
+                ]
+                """;
+
+        List<ExtractedPlace> places = PipelineOutputParser.parse(stdout);
+
+        assertThat(places).hasSize(1);
+        assertThat(places.get(0).name()).isEqualTo("장소");
+        assertThat(places.get(0).category()).isEqualTo("cafe");
+        assertThat(places.get(0).confidence()).isEqualTo(0.9);
+    }
+
+    @Test
     void 잘못된_JSON이면_예외를_던진다() {
         org.junit.jupiter.api.Assertions.assertThrows(
                 PipelineException.class,
