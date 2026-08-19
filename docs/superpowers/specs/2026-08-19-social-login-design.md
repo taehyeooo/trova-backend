@@ -99,7 +99,8 @@ UNIQUE(provider, providerUserId)
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`
 - `KAKAO_CLIENT_ID`, `KAKAO_CLIENT_SECRET`
 - `FRONTEND_URL` (리다이렉트 대상, 로컬: `http://localhost:3000`)
-- `SUPABASE_DB_URL`, `SUPABASE_DB_USERNAME`, `SUPABASE_DB_PASSWORD` (또는 JDBC URL 하나로 통합)
+- `SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`
+  (Spring Boot가 자동 바인딩하는 표준 이름 — `application.yml`에는 아예 안 적음)
 
 `.gitignore`에 로컬 시크릿 파일(`.env`, `application-local.yml` 등) 등록.
 
@@ -118,8 +119,9 @@ UNIQUE(provider, providerUserId)
 
 - OAuth 실패(사용자 거부, provider 오류) → `OAuth2LoginFailureHandler`가
   `FRONTEND_URL/login?error=oauth_failed`로 리다이렉트
-- Kakao 이메일 미동의 → `email` 필드는 nullable로 두고 로그인 자체는
-  허용 (email을 식별자로 쓰지 않고 provider+providerUserId를 씀)
+- Kakao 이메일 미동의 → User 스키마에 애초에 email 필드가 없으므로
+  (provider+providerUserId만 식별자로 씀) 이메일 동의 여부는 로그인에
+  영향을 주지 않음
 - `/api/auth/me` 미인증 접근 → 401 (인증된 사용자 정보 없음을 프론트가
   구분할 수 있어야 하므로 예외 처리 필요)
 
