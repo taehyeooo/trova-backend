@@ -1,0 +1,13 @@
+.git
+.gradle
+.idea
+.worktrees
+.claude
+.superpowers
+build
+docs
+*.md
+pipeline-test/work
+pipeline-test/.env
+pipeline-test/__pycache__
+.env
