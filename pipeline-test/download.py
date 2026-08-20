@@ -21,23 +21,20 @@ def _run_yt_dlp(args: list[str]) -> subprocess.CompletedProcess:
 def download(url: str, out_dir: Path) -> dict:
     """영상을 out_dir/video.* 로, 자막이 있으면 out_dir/video.*.vtt 로 받는다.
 
+    영상 다운로드는 필수, 자막은 best-effort로 별도 호출한다. 두 요청을 한 번에
+    묶으면 yt-dlp가 요청한 자막 언어 중 하나만 실패(예: rate limit)해도 영상
+    다운로드까지 통째로 중단시키는 것을 실측으로 확인했기 때문이다.
+
     반환: {"video_path": Path, "caption_path": Path | None}
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     out_tmpl = str(out_dir / "video.%(ext)s")
-    base_args = [
-        "-f", "bv*+ba/b",
-        "--write-auto-sub", "--write-sub", "--sub-lang", SUB_LANGS,
-        "--sub-format", "vtt",
-        "-o", out_tmpl,
-        "--",
-        url,
-    ]
+    video_args = ["-f", "bv*+ba/b", "-o", out_tmpl, "--", url]
 
-    result = _run_yt_dlp(base_args)
+    result = _run_yt_dlp(video_args)
     if result.returncode != 0 and "403" in result.stderr:
         print("[download] 403 감지 (PO Token 요구) — Chrome 쿠키로 재시도", file=sys.stderr)
-        result = _run_yt_dlp(["--cookies-from-browser", "chrome", *base_args])
+        result = _run_yt_dlp(["--cookies-from-browser", "chrome", *video_args])
 
     if result.returncode != 0:
         raise SystemExit(f"yt-dlp 다운로드 실패:\n{result.stderr[-2000:]}")
@@ -50,8 +47,27 @@ def download(url: str, out_dir: Path) -> dict:
     if not video_candidates:
         raise SystemExit(f"yt-dlp가 영상 파일을 만들지 못했습니다 (out_dir={out_dir})")
 
-    caption_candidates = sorted(out_dir.glob("video.*.vtt"))
-    caption_path = caption_candidates[0] if caption_candidates else None
+    sub_args = [
+        "--write-auto-sub", "--write-sub", "--sub-lang", SUB_LANGS,
+        "--sub-format", "vtt", "--skip-download",
+        "-o", out_tmpl,
+        "--",
+        url,
+    ]
+    sub_result = _run_yt_dlp(sub_args)
+    if sub_result.returncode != 0 and "403" in sub_result.stderr:
+        sub_result = _run_yt_dlp(["--cookies-from-browser", "chrome", *sub_args])
+    if sub_result.returncode != 0:
+        print(f"[download] 자막 다운로드 실패(무시하고 진행): {sub_result.stderr[-500:]}", file=sys.stderr)
+
+    # 언어 우선순위(한국어 우선)를 명시 — 알파벳순 정렬이면 "en"이 "ko"보다 먼저 와서
+    # 둘 다 받아졌을 때 영어 자막이 잘못 선택될 수 있다.
+    caption_path = None
+    for lang in SUB_LANGS.split(","):
+        candidates = sorted(out_dir.glob(f"video.{lang}*.vtt"))
+        if candidates:
+            caption_path = candidates[0]
+            break
 
     return {"video_path": video_candidates[0], "caption_path": caption_path}
 
