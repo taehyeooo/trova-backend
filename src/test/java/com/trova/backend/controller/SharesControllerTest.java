@@ -5,6 +5,8 @@ import com.trova.backend.repository.ProcessingJobRepository;
 import com.trova.backend.repository.UserRepository;
 import com.trova.backend.service.PlaceExtractionService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -72,6 +74,30 @@ class SharesControllerTest {
         org.assertj.core.api.Assertions.assertThat(processingJobRepository.findAll()).hasSize(1);
         verify(placeExtractionService).process(
                 processingJobRepository.findAll().get(0).getId());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "https://m.instagram.com/reel/abc",
+            "https://youtube-nocookie.com/watch?v=abc",
+            "https://www.youtube-nocookie.com/embed/abc",
+            "https://www.youtube.com./shorts/abc"
+    })
+    void 확장된_허용_호스트_변형도_202를_반환한다(String url) throws Exception {
+        userRepository.save(new User("google", "1234567890", "테스트유저", null));
+        doNothing().when(placeExtractionService).process(anyLong());
+
+        mockMvc.perform(post("/api/shares")
+                        .with(oauth2Login()
+                                .clientRegistration(googleRegistration())
+                                .attributes(attrs -> {
+                                    attrs.put("sub", "1234567890");
+                                    attrs.put("name", "테스트유저");
+                                    attrs.put("picture", "https://example.com/p.jpg");
+                                }))
+                        .contentType("application/json")
+                        .content("{\"url\":\"" + url + "\"}"))
+                .andExpect(status().isAccepted());
     }
 
     @Test

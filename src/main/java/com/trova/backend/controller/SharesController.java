@@ -22,9 +22,10 @@ import java.util.Set;
 public class SharesController {
 
     private static final Set<String> YOUTUBE_HOSTS =
-            Set.of("youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be");
+            Set.of("youtube.com", "www.youtube.com", "m.youtube.com", "youtu.be",
+                    "youtube-nocookie.com", "www.youtube-nocookie.com");
     private static final Set<String> INSTAGRAM_HOSTS =
-            Set.of("instagram.com", "www.instagram.com");
+            Set.of("instagram.com", "www.instagram.com", "m.instagram.com");
 
     private final CurrentUserService currentUserService;
     private final ProcessingJobRepository processingJobRepository;
@@ -99,6 +100,9 @@ public class SharesController {
             return null;
         }
         String normalizedHost = host.toLowerCase(Locale.ROOT);
+        if (normalizedHost.endsWith(".")) {
+            normalizedHost = normalizedHost.substring(0, normalizedHost.length() - 1);
+        }
 
         if (YOUTUBE_HOSTS.contains(normalizedHost)) {
             return SourcePlatform.YOUTUBE;
