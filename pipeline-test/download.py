@@ -9,9 +9,12 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 SUB_LANGS = "ko,en"
+MAX_ATTEMPTS = 4
+RETRY_BASE_DELAY = 20.0  # 유튜브 자체 요청 속도 제한(429) 대응 — 넉넉하게 대기
 
 
 def _run_yt_dlp(args: list[str]) -> subprocess.CompletedProcess:
@@ -23,6 +26,12 @@ def download(url: str, out_dir: Path) -> dict:
 
     반환: {"video_path": Path, "caption_path": Path | None}
     """
+    # out_dir가 재사용될 경우(배치 재시도 등) 이전 영상의 파일이 남아있으면
+    # 새 다운로드와 확장자가 달라 둘 다 존재하게 되고, 이후 video_candidates가
+    # 크기순으로 골라서 엉뚱한(이전) 영상 파일을 집을 수 있음 — 매번 깨끗이 비운다.
+    if out_dir.exists():
+        for stale in out_dir.iterdir():
+            stale.unlink()
     out_dir.mkdir(parents=True, exist_ok=True)
     out_tmpl = str(out_dir / "video.%(ext)s")
     base_args = [
@@ -33,10 +42,28 @@ def download(url: str, out_dir: Path) -> dict:
         url,
     ]
 
-    result = _run_yt_dlp(base_args)
-    if result.returncode != 0 and "403" in result.stderr:
-        print("[download] 403 감지 (PO Token 요구) — Chrome 쿠키로 재시도", file=sys.stderr)
-        result = _run_yt_dlp(["--cookies-from-browser", "chrome", *base_args])
+    result = None
+    for attempt in range(MAX_ATTEMPTS):
+        # 첫 시도 이후로는 항상 쿠키를 붙인다 — 로그인된 요청이 403(PO Token)과
+        # 429(속도 제한) 둘 다에 대해 더 관대하게 처리되는 걸 실측으로 확인함.
+        args = base_args if attempt == 0 else ["--cookies-from-browser", "chrome", *base_args]
+        result = _run_yt_dlp(args)
+        if result.returncode == 0:
+            break
+
+        rate_limited = "429" in result.stderr
+        blocked = "403" in result.stderr
+        if not (rate_limited or blocked) or attempt == MAX_ATTEMPTS - 1:
+            break
+
+        delay = RETRY_BASE_DELAY * (2 ** attempt)
+        reason = "429 속도 제한" if rate_limited else "403 (PO Token 요구)"
+        print(
+            f"[download] {reason} 감지 — {delay:.0f}초 대기 후 재시도 "
+            f"({attempt + 2}/{MAX_ATTEMPTS})",
+            file=sys.stderr,
+        )
+        time.sleep(delay)
 
     if result.returncode != 0:
         raise SystemExit(f"yt-dlp 다운로드 실패:\n{result.stderr[-2000:]}")

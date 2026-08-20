@@ -19,6 +19,12 @@ def probe_duration(video_path: Path) -> float:
 
 
 def extract_frames(video_path: Path, out_dir: Path, max_frames: int = 8, width: int = 512) -> list[Path]:
+    # out_dir가 재사용되고 이번 영상이 짧아서 이전 실행보다 프레임 수가 적게
+    # 나오면, 이전 영상의 뒷번호 프레임(frame_005.jpg 등)이 안 지워지고
+    # 남아 다음 Gemini 호출에 섞여 들어갈 수 있음 — 매번 깨끗이 비운다.
+    if out_dir.exists():
+        for stale in out_dir.glob("frame_*.jpg"):
+            stale.unlink()
     out_dir.mkdir(parents=True, exist_ok=True)
     duration = probe_duration(video_path) or float(max_frames)
     interval = max(duration / max_frames, 0.5)
