@@ -1,0 +1,37 @@
+# 20~30개 정확도 검증용 샘플 (실제 존재하는 유튜브 쇼츠, 웹검색으로 수집)
+# 지역별 5개씩 — 부산/제주/서울/강릉/전주
+
+# 부산
+https://www.youtube.com/shorts/gh-njZcrDJQ
+https://www.youtube.com/shorts/YrN-JLPp0wg
+https://www.youtube.com/shorts/NvdrCwcTnlE
+https://www.youtube.com/shorts/wD3lTewRoLE
+https://www.youtube.com/shorts/tX7P33Gv0dU
+
+# 제주
+https://www.youtube.com/shorts/-yD__roX08g
+https://www.youtube.com/shorts/nbTZNiFcif0
+https://www.youtube.com/shorts/IMfvv-P5CXY
+https://www.youtube.com/shorts/wMBpwZ9GTRA
+https://www.youtube.com/shorts/KtrsYKyVxPM
+
+# 서울
+https://www.youtube.com/shorts/45fEeutPgSc
+https://www.youtube.com/shorts/4fe0FhzGdcE
+https://www.youtube.com/shorts/01cgGvqe-zI
+https://www.youtube.com/shorts/R_3C6VOSyI0
+https://www.youtube.com/shorts/y2KxE24O0P4
+
+# 강릉
+https://www.youtube.com/shorts/GYisCxtX7sc
+https://www.youtube.com/shorts/HfSbvpLPEqM
+https://www.youtube.com/shorts/nxy6ReULC20
+https://www.youtube.com/shorts/H1bCCd1vDCA
+https://www.youtube.com/shorts/OWJH8UHFS04
+
+# 전주
+https://www.youtube.com/shorts/dXmuZBBiFGg
+https://www.youtube.com/shorts/LBRXg7Zxlr0
+https://www.youtube.com/shorts/m--pASyRfDE
+https://www.youtube.com/shorts/TPMsWc88hjs
+https://www.youtube.com/shorts/0sXRzyDi1iw
