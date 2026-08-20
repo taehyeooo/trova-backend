@@ -39,6 +39,7 @@ def download(url: str, out_dir: Path) -> dict:
         "--write-auto-sub", "--write-sub", "--sub-lang", SUB_LANGS,
         "--sub-format", "vtt",
         "-o", out_tmpl,
+        "--",
         url,
     ]
 
