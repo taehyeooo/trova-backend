@@ -18,12 +18,25 @@ from pathlib import Path
 DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.5-flash-lite")
 API_BASE = "https://generativelanguage.googleapis.com/v1beta/models"
 
-PROMPT = """당신은 여행 영상 자막/음성/화면 텍스트에서 지도에 저장할 만한 구체적인 장소를 추출하는 도구입니다.
+COLLECT_PROMPT = """당신은 여행 영상 자막/음성/화면 텍스트에서 장소일 가능성이 있는
+고유명사를 하나도 놓치지 않고 나열하는 도구입니다. 아직 최종 정리 단계가 아니니
+과감하게, 후하게 뽑으세요 — 스쳐 지나가듯 짧게 언급된 것, 확실하지 않은 것,
+나중에 걸러질 것 같은 것도 전부 포함하세요. 행정구역명(서울/부산 등)인지 동네인지
+상호명인지 구분하지 말고, 장소처럼 들리거나 화면에 보이는 고유명사는 전부 후보로
+넣으세요. 같은 곳이 여러 번 언급돼도 중복 없이 한 번만 넣으세요.
+
+JSON 배열(문자열 목록)만 출력하세요. 예: ["부산", "해운대", "서면", "황금집"]
+후보가 전혀 없으면 빈 배열 []을 반환하세요. JSON 배열 외의 다른 텍스트는 출력하지 마세요.
+"""
+
+FILTER_PROMPT = """당신은 여행 영상 자막/음성/화면 텍스트에서 지도에 저장할 만한 구체적인 장소를 추출하는 도구입니다.
 
 포함 기준:
 - 식당, 카페, 관광지, 숙소, 상점 등 지도에서 검색해 갈 수 있는 구체적 지점(동네, 랜드마크, 상호명 포함)
 - 오디오에서 스쳐 지나가듯 짧게 언급된 곳도 놓치지 말고 전부 포함하세요
 - 화면에 찍힌 위치 태그/캡션도 반드시 확인해서 포함하세요
+- 아래 "1차 후보 목록"에 있는 이름은 누락 없이 전부 검토하세요 — 포함/제외 기준에
+  따라 최종적으로 빠지는 건 괜찮지만, 검토 자체를 건너뛰지 마세요
 
 제외 기준:
 - 시/도/광역시/특별시 등 행정구역 단위의 넓은 지역명 자체(예: "서울", "부산", "제주도")는 name으로 쓰지 마세요.
@@ -65,7 +78,9 @@ def load_api_key() -> str:
 def build_parts(
     transcript: str | None,
     audio_path: Path | None,
-    frame_paths: list[Path] | None = None,
+    frame_paths: list[Path] | None,
+    prompt: str,
+    candidates: list[str] | None = None,
 ) -> list[dict]:
     parts: list[dict] = []
     if transcript:
@@ -84,8 +99,17 @@ def build_parts(
             "text": "위 이미지들은 영상에서 시간순으로 뽑은 프레임입니다. "
             "화면에 적힌 자막/캡션/위치 태그 등 온스크린 텍스트에서 장소를 찾으세요."
         })
-    parts.append({"text": PROMPT})
+    if candidates is not None:
+        parts.append({"text": f"1차 후보 목록: {json.dumps(candidates, ensure_ascii=False)}"})
+    parts.append({"text": prompt})
     return parts
+
+
+def _extract_text(payload: dict) -> str:
+    try:
+        return payload["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError):
+        raise SystemExit(f"Unexpected Gemini response shape: {json.dumps(payload)[:500]}")
 
 
 MAX_ATTEMPTS = 5
@@ -141,6 +165,26 @@ def call_gemini(parts: list[dict], model: str, api_key: str) -> dict:
     raise SystemExit(f"Gemini API 요청이 {MAX_ATTEMPTS}번 시도 후 실패: {last_detail[:500]}")
 
 
+def collect_candidates(
+    transcript: str | None,
+    audio_path: Path | None,
+    frame_paths: list[Path] | None,
+    model: str,
+    api_key: str,
+) -> list[str]:
+    """1단계: 필터링 없이 장소일 가능성이 있는 고유명사를 최대한 후하게 나열한다."""
+    parts = build_parts(transcript, audio_path, frame_paths, prompt=COLLECT_PROMPT)
+    payload = call_gemini(parts, model, api_key)
+    text = _extract_text(payload)
+    try:
+        candidates = json.loads(text)
+    except json.JSONDecodeError:
+        raise SystemExit(f"Gemini did not return valid JSON (1단계): {text[:500]}")
+    if not isinstance(candidates, list):
+        raise SystemExit(f"Gemini 1단계 응답이 배열이 아닙니다: {text[:500]}")
+    return candidates
+
+
 def extract_places(
     transcript: str | None = None,
     audio_path: Path | None = None,
@@ -150,16 +194,16 @@ def extract_places(
     if not transcript and not audio_path and not frame_paths:
         raise ValueError("transcript, audio_path, frame_paths 중 하나는 필요합니다")
     api_key = load_api_key()
-    parts = build_parts(transcript, audio_path, frame_paths)
+
+    candidates = collect_candidates(transcript, audio_path, frame_paths, model, api_key)
+
+    parts = build_parts(transcript, audio_path, frame_paths, prompt=FILTER_PROMPT, candidates=candidates)
     payload = call_gemini(parts, model, api_key)
-    try:
-        text = payload["candidates"][0]["content"]["parts"][0]["text"]
-    except (KeyError, IndexError):
-        raise SystemExit(f"Unexpected Gemini response shape: {json.dumps(payload)[:500]}")
+    text = _extract_text(payload)
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        raise SystemExit(f"Gemini did not return valid JSON: {text[:500]}")
+        raise SystemExit(f"Gemini did not return valid JSON (2단계): {text[:500]}")
 
 
 if __name__ == "__main__":
