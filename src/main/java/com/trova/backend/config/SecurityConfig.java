@@ -40,13 +40,19 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 세션 쿠키 기반 API + 별도 origin 프론트 조합이라 CSRF는 우선 비활성화한 상태다.
+                // 세션 쿠키 기반 API + 별도 origin 프론트 조합이라 CSRF는 비활성화한 상태다.
                 // 단, CSRF 설정자가 없으면 LogoutConfigurer가 로그아웃 매처를 POST뿐 아니라
                 // GET/PUT/DELETE까지 허용하도록 폴백하므로, 타 사이트의 <img src> 한 줄로도
                 // 강제 로그아웃이 가능해진다. 그래서 아래 logout 설정에서 매처를 POST로 명시 고정한다.
-                // 로그아웃 외의 상태 변경 엔드포인트(POST /api/shares 등)를 추가하기 전에,
-                // 특히 SameSite=None으로 크로스 사이트 세션 쿠키가 오가는 운영 배포 전에는
-                // 이 영역(CSRF 비활성화 여부 포함)을 반드시 다시 검토해야 한다.
+                //
+                // 재검토 결과(POST /api/shares, DELETE /api/places/{id} 추가 후):
+                // 세션 쿠키가 SameSite=Lax(application.yml에 명시)이고 CORS도 frontendUrl
+                // 단일 origin 화이트리스트라, 상태 변경 요청은 (1) 크로스사이트 form POST면
+                // Lax가 쿠키 전송을 막고, (2) JSON body라 브라우저가 preflight를 강제하는데
+                // 허용 안 된 origin이면 preflight에서 막힌다 — 두 계층 모두 뚫려야 성립하는
+                // 공격이라 CSRF 비활성화 유지로 결론. 단, 이후 SameSite=None이 필요해지는
+                // 상황(임베드/크로스사이트 쿠키 요구 등)이 생기면 이 판단은 무효이므로
+                // 그때 반드시 다시 검토할 것.
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
