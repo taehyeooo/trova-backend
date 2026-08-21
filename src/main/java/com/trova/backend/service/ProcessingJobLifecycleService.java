@@ -42,7 +42,9 @@ public class ProcessingJobLifecycleService {
                 extracted.region(),
                 extracted.category(),
                 geocoded.latitude(),
-                geocoded.longitude()
+                geocoded.longitude(),
+                extracted.dayNumber(),
+                extracted.orderInDay()
         ));
     }
 
