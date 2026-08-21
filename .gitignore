@@ -36,6 +36,7 @@ bin/
 application-local.yml
 application-*.local.yml
 pipeline-test/work/
+k8s/secret.yaml
 
 ### Python ###
 __pycache__/

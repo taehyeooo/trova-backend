@@ -1,0 +1,49 @@
+# Ampere A1 인스턴스(2 OCPU/12GB) 기준 리소스 값. 1 OCPU/~500MB짜리 AMD Always Free
+# 인스턴스에서는 k3s 부트스트랩 자체가 두 번 다 멈춰서(실측), 최소 A1급 노드를 전제로 함.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trova-backend
+  labels:
+    app: trova-backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trova-backend
+  template:
+    metadata:
+      labels:
+        app: trova-backend
+    spec:
+      containers:
+        - name: trova-backend
+          image: trova-backend:latest
+          # 레지스트리 없이 노드에서 직접 빌드 → containerd로 임포트해서 쓰는 구조.
+          # k8s/README.md 참고. 이미지를 새로 빌드했으면 반드시 imagePullPolicy를
+          # 유지한 채 파드를 재생성(rollout restart)해야 새 이미지가 반영된다.
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - secretRef:
+                name: trova-backend-secrets
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "1500m"
+              memory: "1536Mi"
+          # actuator 의존성이 없고 모든 API가 인증을 요구해서(SecurityConfig) HTTP
+          # 경로 기반 헬스체크를 쓸 수 없다 — TCP 소켓 체크로 대체.
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 30
