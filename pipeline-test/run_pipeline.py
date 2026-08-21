@@ -35,11 +35,14 @@ def extract_audio(video_path: Path, out_path: Path) -> Path:
     return out_path
 
 
-def run(url: str, work_dir: Path) -> list[dict]:
+def run(url: str, work_dir: Path) -> dict:
     print(f"[pipeline] 다운로드 중: {url}", file=sys.stderr)
     info = download.download(url, work_dir / "download")
     video_path = info["video_path"]
     caption_path = info["caption_path"]
+
+    title = download.get_title(url)
+    print(f"[pipeline] 제목: {title!r}", file=sys.stderr)
 
     transcript = None
     if caption_path:
@@ -56,7 +59,8 @@ def run(url: str, work_dir: Path) -> list[dict]:
     frame_paths = frames_mod.extract_frames(video_path, work_dir / "frames", max_frames=MAX_FRAMES)
 
     print("[pipeline] Gemini 호출", file=sys.stderr)
-    return extract_places(transcript=transcript, audio_path=audio_path, frame_paths=frame_paths)
+    places = extract_places(transcript=transcript, audio_path=audio_path, frame_paths=frame_paths)
+    return {"title": title, "places": places}
 
 
 if __name__ == "__main__":
@@ -65,7 +69,7 @@ if __name__ == "__main__":
         raise SystemExit(2)
     url = sys.argv[1]
     work_dir = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("work") / "run"
-    places = run(url, work_dir)
+    result = run(url, work_dir)
 
     import json
-    print(json.dumps(places, ensure_ascii=False, indent=2))
+    print(json.dumps(result, ensure_ascii=False, indent=2))
