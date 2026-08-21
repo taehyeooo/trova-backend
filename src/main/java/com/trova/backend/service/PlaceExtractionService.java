@@ -3,13 +3,12 @@ package com.trova.backend.service;
 import com.trova.backend.geocoding.GeocodingResult;
 import com.trova.backend.geocoding.KakaoGeocodingService;
 import com.trova.backend.pipeline.ExtractedPlace;
+import com.trova.backend.pipeline.PipelineOutput;
 import com.trova.backend.pipeline.PipelineRunner;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class PlaceExtractionService {
@@ -36,10 +35,12 @@ public class PlaceExtractionService {
             String sourceUrl = lifecycleService.markProcessing(jobId);
             log.info("ProcessingJob {} 파이프라인 시작: {}", jobId, sourceUrl);
 
-            List<ExtractedPlace> extractedPlaces = pipelineRunner.run(sourceUrl, jobId);
-            log.info("ProcessingJob {} 파이프라인 완료: {}개 장소 추출", jobId, extractedPlaces.size());
+            PipelineOutput output = pipelineRunner.run(sourceUrl, jobId);
+            log.info("ProcessingJob {} 파이프라인 완료: {}개 장소 추출", jobId, output.places().size());
 
-            for (ExtractedPlace extracted : extractedPlaces) {
+            lifecycleService.setTitle(jobId, output.title());
+
+            for (ExtractedPlace extracted : output.places()) {
                 GeocodingResult geocoded = kakaoGeocodingService.geocode(extracted.name(), extracted.region());
                 lifecycleService.savePlace(jobId, extracted, geocoded);
             }

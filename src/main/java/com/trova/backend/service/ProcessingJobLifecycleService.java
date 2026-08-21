@@ -33,6 +33,11 @@ public class ProcessingJobLifecycleService {
     }
 
     @Transactional
+    public void setTitle(Long jobId, String title) {
+        getJob(jobId).setTitle(title);
+    }
+
+    @Transactional
     public void savePlace(Long jobId, ExtractedPlace extracted, GeocodingResult geocoded) {
         ProcessingJob job = getJob(jobId);
         savedPlaceRepository.save(new SavedPlace(

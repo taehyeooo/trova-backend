@@ -34,6 +34,9 @@ public class SavedPlace {
     @Column(name = "source_url", nullable = false)
     private String sourceUrl;
 
+    @Column(name = "title")
+    private String title;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "source_platform", nullable = false)
     private SourcePlatform sourcePlatform;
@@ -66,6 +69,7 @@ public class SavedPlace {
         this.latitude = latitude;
         this.longitude = longitude;
         this.sourceUrl = processingJob.getSourceUrl();
+        this.title = processingJob.getTitle();
         this.sourcePlatform = processingJob.getSourcePlatform();
         this.dayNumber = dayNumber;
         this.orderInDay = orderInDay;
@@ -81,6 +85,7 @@ public class SavedPlace {
     public Double getLatitude() { return latitude; }
     public Double getLongitude() { return longitude; }
     public String getSourceUrl() { return sourceUrl; }
+    public String getTitle() { return title; }
     public SourcePlatform getSourcePlatform() { return sourcePlatform; }
     public Integer getDayNumber() { return dayNumber; }
     public Integer getOrderInDay() { return orderInDay; }

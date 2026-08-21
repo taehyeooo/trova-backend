@@ -11,7 +11,6 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -36,7 +35,7 @@ public class PipelineRunner {
         this.geminiApiKey = geminiApiKey;
     }
 
-    public List<ExtractedPlace> run(String url, Long jobId) {
+    public PipelineOutput run(String url, Long jobId) {
         Path workDir = Path.of(workDirBase, "job-" + jobId);
         ProcessBuilder builder = new ProcessBuilder("python3", scriptPath, url, workDir.toString());
         builder.environment().put("GEMINI_API_KEY", geminiApiKey);

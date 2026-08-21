@@ -72,6 +72,20 @@ class SavedPlaceRepositoryTest {
     }
 
     @Test
+    void job의_title이_SavedPlace_생성시_복사되어_저장된다() {
+        User user = userRepository.save(new User("google", "8", "제목유저", null));
+        ProcessingJob job = processingJobRepository.save(
+                new ProcessingJob(user, "https://youtu.be/title", SourcePlatform.YOUTUBE));
+        job.setTitle("부산 여행 브이로그");
+        SavedPlace place = savedPlaceRepository.save(
+                new SavedPlace(job, user, "해운대", "부산", "attraction", 35.16, 129.16));
+
+        SavedPlace reloaded = savedPlaceRepository.findById(place.getId()).orElseThrow();
+
+        assertThat(reloaded.getTitle()).isEqualTo("부산 여행 브이로그");
+    }
+
+    @Test
     void 일정형이_아니면_dayNumber와_orderInDay가_null이다() {
         User user = userRepository.save(new User("google", "7", "일반유저", null));
         ProcessingJob job = processingJobRepository.save(

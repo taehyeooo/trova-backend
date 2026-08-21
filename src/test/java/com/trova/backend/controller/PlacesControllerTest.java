@@ -129,6 +129,33 @@ class PlacesControllerTest {
     }
 
     @Test
+    void 장소_목록에_영상_제목이_포함된다() throws Exception {
+        User me = userRepository.save(new User("google", "jjj", "제목유저", null));
+        ProcessingJob job = processingJobRepository.save(
+                new ProcessingJob(me, "https://youtu.be/title2", SourcePlatform.YOUTUBE));
+        job.setTitle("부산 여행 브이로그");
+        processingJobRepository.save(job);
+        savedPlaceRepository.save(new SavedPlace(job, me, "해운대", "부산", "attraction", 35.16, 129.16));
+
+        mockMvc.perform(get("/api/places").with(loginAs("jjj", "제목유저")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("부산 여행 브이로그"));
+    }
+
+    @Test
+    void pending_목록에_영상_제목이_포함된다() throws Exception {
+        User me = userRepository.save(new User("google", "kkk", "제목유저2", null));
+        ProcessingJob job = processingJobRepository.save(
+                new ProcessingJob(me, "https://youtu.be/title3", SourcePlatform.YOUTUBE));
+        job.setTitle("서울 카페 투어");
+        processingJobRepository.save(job);
+
+        mockMvc.perform(get("/api/places/pending").with(loginAs("kkk", "제목유저2")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].title").value("서울 카페 투어"));
+    }
+
+    @Test
     void 일정형_장소는_dayNumber와_orderInDay를_반환한다() throws Exception {
         User me = userRepository.save(new User("google", "hhh", "일정유저", null));
         ProcessingJob job = processingJobRepository.save(

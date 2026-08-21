@@ -109,6 +109,16 @@ class ProcessingJobLifecycleServiceIntegrationTest {
     }
 
     @Test
+    void setTitle이_영상_제목을_저장한다() {
+        ProcessingJob job = newJob();
+
+        lifecycleService.setTitle(job.getId(), "부산 여행 브이로그");
+
+        ProcessingJob reloaded = processingJobRepository.findById(job.getId()).orElseThrow();
+        assertThat(reloaded.getTitle()).isEqualTo("부산 여행 브이로그");
+    }
+
+    @Test
     void savePlace가_dayNumber와_orderInDay를_함께_저장한다() {
         ProcessingJob job = newJob();
         ExtractedPlace extracted = new ExtractedPlace("해운대", "부산", "attraction", 0.95, 2, 3);

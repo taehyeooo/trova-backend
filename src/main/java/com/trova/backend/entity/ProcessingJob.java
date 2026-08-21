@@ -19,6 +19,9 @@ public class ProcessingJob {
     @Column(name = "source_url", nullable = false)
     private String sourceUrl;
 
+    @Column(name = "title")
+    private String title;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "source_platform", nullable = false)
     private SourcePlatform sourcePlatform;
@@ -52,6 +55,11 @@ public class ProcessingJob {
         this.updatedAt = this.createdAt;
     }
 
+    public void setTitle(String title) {
+        this.title = title;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public void markProcessing() {
         this.status = JobStatus.PROCESSING;
         this.updatedAt = LocalDateTime.now();
@@ -72,6 +80,7 @@ public class ProcessingJob {
     public Long getId() { return id; }
     public User getUser() { return user; }
     public String getSourceUrl() { return sourceUrl; }
+    public String getTitle() { return title; }
     public SourcePlatform getSourcePlatform() { return sourcePlatform; }
     public JobStatus getStatus() { return status; }
     public String getErrorMessage() { return errorMessage; }

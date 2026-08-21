@@ -33,23 +33,25 @@ public class PlacesController {
 
     public record PlaceResponse(
             Long id, String placeName, String region, String category,
-            Double latitude, Double longitude, String sourceUrl,
+            Double latitude, Double longitude, String sourceUrl, String title,
             String sourcePlatform, String createdAt, Integer dayNumber, Integer orderInDay
     ) {
         static PlaceResponse from(SavedPlace place) {
             return new PlaceResponse(
                     place.getId(), place.getPlaceName(), place.getRegion(), place.getCategory(),
-                    place.getLatitude(), place.getLongitude(), place.getSourceUrl(),
+                    place.getLatitude(), place.getLongitude(), place.getSourceUrl(), place.getTitle(),
                     place.getSourcePlatform().name(), place.getCreatedAt().toString(),
                     place.getDayNumber(), place.getOrderInDay()
             );
         }
     }
 
-    public record PendingJobResponse(Long jobId, String sourceUrl, String sourcePlatform, String status, String createdAt) {
+    public record PendingJobResponse(
+            Long jobId, String sourceUrl, String title, String sourcePlatform, String status, String createdAt
+    ) {
         static PendingJobResponse from(ProcessingJob job) {
             return new PendingJobResponse(
-                    job.getId(), job.getSourceUrl(), job.getSourcePlatform().name(),
+                    job.getId(), job.getSourceUrl(), job.getTitle(), job.getSourcePlatform().name(),
                     job.getStatus().name(), job.getCreatedAt().toString()
             );
         }
