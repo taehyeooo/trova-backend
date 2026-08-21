@@ -56,4 +56,32 @@ class SavedPlaceRepositoryTest {
         assertThat(places).extracting(SavedPlace::getId)
                 .containsExactly(second.getId(), first.getId());
     }
+
+    @Test
+    void dayNumber와_orderInDay가_저장되고_조회된다() {
+        User user = userRepository.save(new User("google", "6", "일정유저", null));
+        ProcessingJob job = processingJobRepository.save(
+                new ProcessingJob(user, "https://youtu.be/itinerary", SourcePlatform.YOUTUBE));
+        SavedPlace place = savedPlaceRepository.save(
+                new SavedPlace(job, user, "해운대", "부산", "attraction", 35.16, 129.16, 1, 1));
+
+        SavedPlace reloaded = savedPlaceRepository.findById(place.getId()).orElseThrow();
+
+        assertThat(reloaded.getDayNumber()).isEqualTo(1);
+        assertThat(reloaded.getOrderInDay()).isEqualTo(1);
+    }
+
+    @Test
+    void 일정형이_아니면_dayNumber와_orderInDay가_null이다() {
+        User user = userRepository.save(new User("google", "7", "일반유저", null));
+        ProcessingJob job = processingJobRepository.save(
+                new ProcessingJob(user, "https://youtu.be/normal", SourcePlatform.YOUTUBE));
+        SavedPlace place = savedPlaceRepository.save(
+                new SavedPlace(job, user, "장소", null, "cafe", null, null));
+
+        SavedPlace reloaded = savedPlaceRepository.findById(place.getId()).orElseThrow();
+
+        assertThat(reloaded.getDayNumber()).isNull();
+        assertThat(reloaded.getOrderInDay()).isNull();
+    }
 }

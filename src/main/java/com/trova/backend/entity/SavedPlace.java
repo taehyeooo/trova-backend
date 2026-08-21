@@ -38,6 +38,12 @@ public class SavedPlace {
     @Column(name = "source_platform", nullable = false)
     private SourcePlatform sourcePlatform;
 
+    @Column(name = "day_number")
+    private Integer dayNumber;
+
+    @Column(name = "order_in_day")
+    private Integer orderInDay;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -46,6 +52,12 @@ public class SavedPlace {
 
     public SavedPlace(ProcessingJob processingJob, User user, String placeName, String region,
                        String category, Double latitude, Double longitude) {
+        this(processingJob, user, placeName, region, category, latitude, longitude, null, null);
+    }
+
+    public SavedPlace(ProcessingJob processingJob, User user, String placeName, String region,
+                       String category, Double latitude, Double longitude,
+                       Integer dayNumber, Integer orderInDay) {
         this.processingJob = processingJob;
         this.user = user;
         this.placeName = placeName;
@@ -55,6 +67,8 @@ public class SavedPlace {
         this.longitude = longitude;
         this.sourceUrl = processingJob.getSourceUrl();
         this.sourcePlatform = processingJob.getSourcePlatform();
+        this.dayNumber = dayNumber;
+        this.orderInDay = orderInDay;
         this.createdAt = LocalDateTime.now();
     }
 
@@ -68,5 +82,7 @@ public class SavedPlace {
     public Double getLongitude() { return longitude; }
     public String getSourceUrl() { return sourceUrl; }
     public SourcePlatform getSourcePlatform() { return sourcePlatform; }
+    public Integer getDayNumber() { return dayNumber; }
+    public Integer getOrderInDay() { return orderInDay; }
     public LocalDateTime getCreatedAt() { return createdAt; }
 }
