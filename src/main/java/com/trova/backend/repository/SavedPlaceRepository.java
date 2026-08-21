@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface SavedPlaceRepository extends JpaRepository<SavedPlace, Long> {
     List<SavedPlace> findByUserOrderByCreatedAtDescIdDesc(User user);
     Optional<SavedPlace> findByIdAndUser(Long id, User user);
+    void deleteByUser(User user);
 }
