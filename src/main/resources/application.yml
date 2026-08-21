@@ -6,6 +6,16 @@ server:
         same-site: lax
 
 spring:
+  datasource:
+    hikari:
+      data-source-properties:
+        # Supabase의 커넥션 풀러(PgBouncer, transaction 모드)는 server-side prepared
+        # statement를 지원하지 않는다. 풀에서 커넥션을 재사용할 때마다 실제 서버 세션이
+        # 바뀔 수 있어, JDBC 드라이버가 캐싱한 prepared statement 이름(S_1, S_2...)이
+        # 다른 세션에 이미 존재하는 것과 충돌해 "prepared statement already exists"
+        # 에러로 요청이 간헐적으로 실패한다. prepareThreshold=0으로 server-side prepare
+        # 자체를 끈다.
+        prepareThreshold: 0
   jpa:
     hibernate:
       ddl-auto: update
