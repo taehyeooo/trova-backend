@@ -34,13 +34,14 @@ public class PlacesController {
     public record PlaceResponse(
             Long id, String placeName, String region, String category,
             Double latitude, Double longitude, String sourceUrl,
-            String sourcePlatform, String createdAt
+            String sourcePlatform, String createdAt, Integer dayNumber, Integer orderInDay
     ) {
         static PlaceResponse from(SavedPlace place) {
             return new PlaceResponse(
                     place.getId(), place.getPlaceName(), place.getRegion(), place.getCategory(),
                     place.getLatitude(), place.getLongitude(), place.getSourceUrl(),
-                    place.getSourcePlatform().name(), place.getCreatedAt().toString()
+                    place.getSourcePlatform().name(), place.getCreatedAt().toString(),
+                    place.getDayNumber(), place.getOrderInDay()
             );
         }
     }

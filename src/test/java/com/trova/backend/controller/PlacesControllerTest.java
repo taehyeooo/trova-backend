@@ -127,4 +127,31 @@ class PlacesControllerTest {
                 .andExpect(jsonPath("$[0].jobId").value(failed.getId()))
                 .andExpect(jsonPath("$[0].status").value("FAILED"));
     }
+
+    @Test
+    void 일정형_장소는_dayNumber와_orderInDay를_반환한다() throws Exception {
+        User me = userRepository.save(new User("google", "hhh", "일정유저", null));
+        ProcessingJob job = processingJobRepository.save(
+                new ProcessingJob(me, "https://youtu.be/itinerary2", SourcePlatform.YOUTUBE));
+        savedPlaceRepository.save(
+                new SavedPlace(job, me, "해운대", "부산", "attraction", 35.16, 129.16, 1, 1));
+
+        mockMvc.perform(get("/api/places").with(loginAs("hhh", "일정유저")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].dayNumber").value(1))
+                .andExpect(jsonPath("$[0].orderInDay").value(1));
+    }
+
+    @Test
+    void 일정형이_아닌_장소는_dayNumber가_null이다() throws Exception {
+        User me = userRepository.save(new User("google", "iii", "일반유저2", null));
+        ProcessingJob job = processingJobRepository.save(
+                new ProcessingJob(me, "https://youtu.be/normal2", SourcePlatform.YOUTUBE));
+        savedPlaceRepository.save(
+                new SavedPlace(job, me, "장소", null, "cafe", null, null));
+
+        mockMvc.perform(get("/api/places").with(loginAs("iii", "일반유저2")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].dayNumber").value(org.hamcrest.Matchers.nullValue()));
+    }
 }
