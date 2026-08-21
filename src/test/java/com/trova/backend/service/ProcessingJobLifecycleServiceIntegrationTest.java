@@ -111,13 +111,13 @@ class ProcessingJobLifecycleServiceIntegrationTest {
     @Test
     void savePlace가_dayNumber와_orderInDay를_함께_저장한다() {
         ProcessingJob job = newJob();
-        ExtractedPlace extracted = new ExtractedPlace("해운대", "부산", "attraction", 0.95, 1, 1);
+        ExtractedPlace extracted = new ExtractedPlace("해운대", "부산", "attraction", 0.95, 2, 3);
         GeocodingResult geocoded = new GeocodingResult(35.16, 129.16);
 
         lifecycleService.savePlace(job.getId(), extracted, geocoded);
 
         SavedPlace saved = savedPlaceRepository.findByUserOrderByCreatedAtDescIdDesc(job.getUser()).get(0);
-        assertThat(saved.getDayNumber()).isEqualTo(1);
-        assertThat(saved.getOrderInDay()).isEqualTo(1);
+        assertThat(saved.getDayNumber()).isEqualTo(2);
+        assertThat(saved.getOrderInDay()).isEqualTo(3);
     }
 }

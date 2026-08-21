@@ -123,6 +123,22 @@ def _extract_text(payload: dict) -> str:
         raise SystemExit(f"Unexpected Gemini response shape: {json.dumps(payload)[:500]}")
 
 
+def _normalize_day_fields(places: list[dict]) -> list[dict]:
+    """Gemini가 dayNumber/orderInDay를 정수가 아닌 값(예: "1일차")으로 반환해도
+    해당 필드만 null로 정규화한다 — 일정 판단 실패가 영상 전체 추출을 실패시키지 않도록.
+    """
+    for place in places:
+        for key in ("dayNumber", "orderInDay"):
+            value = place.get(key)
+            if value is None:
+                continue
+            try:
+                place[key] = int(value)
+            except (TypeError, ValueError):
+                place[key] = None
+    return places
+
+
 MAX_ATTEMPTS = 5
 RETRY_BASE_DELAY = 5.0  # 무료 티어 RPM 제한 대응 — 429/일시 오류 시 지수 백오프
 
@@ -212,9 +228,10 @@ def extract_places(
     payload = call_gemini(parts, model, api_key)
     text = _extract_text(payload)
     try:
-        return json.loads(text)
+        places = json.loads(text)
     except json.JSONDecodeError:
         raise SystemExit(f"Gemini did not return valid JSON (2단계): {text[:500]}")
+    return _normalize_day_fields(places)
 
 
 if __name__ == "__main__":

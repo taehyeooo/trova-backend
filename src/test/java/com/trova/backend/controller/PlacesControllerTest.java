@@ -134,12 +134,12 @@ class PlacesControllerTest {
         ProcessingJob job = processingJobRepository.save(
                 new ProcessingJob(me, "https://youtu.be/itinerary2", SourcePlatform.YOUTUBE));
         savedPlaceRepository.save(
-                new SavedPlace(job, me, "해운대", "부산", "attraction", 35.16, 129.16, 1, 1));
+                new SavedPlace(job, me, "해운대", "부산", "attraction", 35.16, 129.16, 2, 3));
 
         mockMvc.perform(get("/api/places").with(loginAs("hhh", "일정유저")))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].dayNumber").value(1))
-                .andExpect(jsonPath("$[0].orderInDay").value(1));
+                .andExpect(jsonPath("$[0].dayNumber").value(2))
+                .andExpect(jsonPath("$[0].orderInDay").value(3));
     }
 
     @Test

@@ -63,12 +63,12 @@ class SavedPlaceRepositoryTest {
         ProcessingJob job = processingJobRepository.save(
                 new ProcessingJob(user, "https://youtu.be/itinerary", SourcePlatform.YOUTUBE));
         SavedPlace place = savedPlaceRepository.save(
-                new SavedPlace(job, user, "해운대", "부산", "attraction", 35.16, 129.16, 1, 1));
+                new SavedPlace(job, user, "해운대", "부산", "attraction", 35.16, 129.16, 2, 3));
 
         SavedPlace reloaded = savedPlaceRepository.findById(place.getId()).orElseThrow();
 
-        assertThat(reloaded.getDayNumber()).isEqualTo(1);
-        assertThat(reloaded.getOrderInDay()).isEqualTo(1);
+        assertThat(reloaded.getDayNumber()).isEqualTo(2);
+        assertThat(reloaded.getOrderInDay()).isEqualTo(3);
     }
 
     @Test
