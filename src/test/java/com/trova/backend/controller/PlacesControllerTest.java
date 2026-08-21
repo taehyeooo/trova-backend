@@ -113,4 +113,18 @@ class PlacesControllerTest {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].jobId").value(pending.getId()));
     }
+
+    @Test
+    void 실패한_작업도_pending_목록에_포함된다() throws Exception {
+        User me = userRepository.save(new User("google", "ggg", "나5", null));
+        ProcessingJob failed = processingJobRepository.save(new ProcessingJob(me, "https://youtu.be/failed", SourcePlatform.YOUTUBE));
+        failed.markFailed("yt-dlp 403");
+        processingJobRepository.save(failed);
+
+        mockMvc.perform(get("/api/places/pending").with(loginAs("ggg", "나5")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].jobId").value(failed.getId()))
+                .andExpect(jsonPath("$[0].status").value("FAILED"));
+    }
 }

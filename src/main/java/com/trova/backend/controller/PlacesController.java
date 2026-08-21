@@ -65,7 +65,10 @@ public class PlacesController {
     @GetMapping("/pending")
     public List<PendingJobResponse> pending(OAuth2AuthenticationToken authentication) {
         User user = currentUserService.resolve(authentication);
-        return processingJobRepository.findByUserAndStatusIn(user, List.of(JobStatus.PENDING, JobStatus.PROCESSING))
+        // FAILED도 포함한다 — 실패한 job은 SavedPlace가 안 생겨서, 여기서 빼면
+        // 사용자 입장에서 요청이 이유 없이 사라진 것처럼 보인다.
+        return processingJobRepository.findByUserAndStatusIn(
+                        user, List.of(JobStatus.PENDING, JobStatus.PROCESSING, JobStatus.FAILED))
                 .stream()
                 .map(PendingJobResponse::from)
                 .toList();
