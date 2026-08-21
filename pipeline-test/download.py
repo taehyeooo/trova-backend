@@ -2,20 +2,47 @@
 """URL에서 영상 + (있으면) 자막을 함께 받는다.
 
 YouTube가 2025년 하반기부터 PO Token 검증을 강화하면서 쿠키 없는 요청은
-종종 403을 반환한다. 403이 뜨면 브라우저(Chrome) 로그인 쿠키로 자동 재시도한다.
+종종(확률적으로) 403을 반환한다 — 같은 영상도 순수 재시도만으로 성공하는 경우를
+실측으로 확인했다. 그래서 403이 뜨면 먼저 순수 재시도를 몇 번 하고, 그래도 안 되면
+브라우저(Chrome) 로그인 쿠키로 재시도한다. 쿠키 재시도는 로컬(Chrome 설치된 환경)
+에서만 의미가 있고, 헤드리스 배포 환경에서는 실패하고 넘어간다 — 그래서 배포
+환경에서는 사실상 순수 재시도가 유일한 방어선이다.
 """
 from __future__ import annotations
 
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 SUB_LANGS = "ko,en"
+MAX_PLAIN_RETRIES = 3
+PLAIN_RETRY_BACKOFF = 3.0
 
 
 def _run_yt_dlp(args: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(["yt-dlp", *args], capture_output=True, text=True)
+
+
+def _download_with_retry(video_args: list[str]) -> subprocess.CompletedProcess:
+    result = _run_yt_dlp(video_args)
+    attempt = 0
+    while result.returncode != 0 and "403" in result.stderr and attempt < MAX_PLAIN_RETRIES:
+        attempt += 1
+        delay = PLAIN_RETRY_BACKOFF * attempt
+        print(
+            f"[download] 403 감지 — 순수 재시도 {attempt}/{MAX_PLAIN_RETRIES} ({delay:.0f}초 대기)",
+            file=sys.stderr,
+        )
+        time.sleep(delay)
+        result = _run_yt_dlp(video_args)
+
+    if result.returncode != 0 and "403" in result.stderr:
+        print("[download] 순수 재시도 소진 — Chrome 쿠키로 재시도(로컬에 Chrome 있을 때만 동작)", file=sys.stderr)
+        result = _run_yt_dlp(["--cookies-from-browser", "chrome", *video_args])
+
+    return result
 
 
 def download(url: str, out_dir: Path) -> dict:
@@ -31,10 +58,7 @@ def download(url: str, out_dir: Path) -> dict:
     out_tmpl = str(out_dir / "video.%(ext)s")
     video_args = ["-f", "bv*+ba/b", "-o", out_tmpl, "--", url]
 
-    result = _run_yt_dlp(video_args)
-    if result.returncode != 0 and "403" in result.stderr:
-        print("[download] 403 감지 (PO Token 요구) — Chrome 쿠키로 재시도", file=sys.stderr)
-        result = _run_yt_dlp(["--cookies-from-browser", "chrome", *video_args])
+    result = _download_with_retry(video_args)
 
     if result.returncode != 0:
         raise SystemExit(f"yt-dlp 다운로드 실패:\n{result.stderr[-2000:]}")
