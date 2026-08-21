@@ -55,4 +55,34 @@ class PipelineOutputParserTest {
                 PipelineException.class,
                 () -> PipelineOutputParser.parse("이건 JSON이 아님"));
     }
+
+    @Test
+    void dayNumber와_orderInDay가_있으면_함께_파싱된다() {
+        String stdout = """
+                [
+                  {"name": "해운대", "region": "부산", "category": "attraction", "confidence": 0.95, "dayNumber": 1, "orderInDay": 1},
+                  {"name": "서면", "region": "부산", "category": "shopping", "confidence": 0.9, "dayNumber": 2, "orderInDay": 1}
+                ]
+                """;
+
+        List<ExtractedPlace> places = PipelineOutputParser.parse(stdout);
+
+        assertThat(places.get(0).dayNumber()).isEqualTo(1);
+        assertThat(places.get(0).orderInDay()).isEqualTo(1);
+        assertThat(places.get(1).dayNumber()).isEqualTo(2);
+    }
+
+    @Test
+    void dayNumber와_orderInDay가_없으면_null로_파싱된다() {
+        String stdout = """
+                [
+                  {"name": "해운대", "region": "부산", "category": "attraction", "confidence": 0.95}
+                ]
+                """;
+
+        List<ExtractedPlace> places = PipelineOutputParser.parse(stdout);
+
+        assertThat(places.get(0).dayNumber()).isNull();
+        assertThat(places.get(0).orderInDay()).isNull();
+    }
 }
