@@ -40,10 +40,13 @@ public class ProcessingJobLifecycleService {
     @Transactional
     public void savePlace(Long jobId, ExtractedPlace extracted, GeocodingResult geocoded) {
         ProcessingJob job = getJob(jobId);
+        // 카카오 검색으로 실제 존재가 확인된 이름(matchedName)이 있으면 그걸 우선한다 —
+        // Gemini가 읽어낸 이름이 오탈자였어도 카카오 DB의 정확한 상호명으로 보정된다.
+        String placeName = geocoded.matchedName() != null ? geocoded.matchedName() : extracted.name();
         savedPlaceRepository.save(new SavedPlace(
                 job,
                 job.getUser(),
-                extracted.name(),
+                placeName,
                 extracted.region(),
                 extracted.category(),
                 geocoded.latitude(),

@@ -15,6 +15,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
@@ -121,13 +123,28 @@ class ProcessingJobLifecycleServiceIntegrationTest {
     @Test
     void savePlace가_dayNumber와_orderInDay를_함께_저장한다() {
         ProcessingJob job = newJob();
-        ExtractedPlace extracted = new ExtractedPlace("해운대", "부산", "attraction", 0.95, 2, 3);
-        GeocodingResult geocoded = new GeocodingResult(35.16, 129.16);
+        ExtractedPlace extracted =
+                new ExtractedPlace("해운대", "부산", "attraction", 0.95, 2, 3, List.of("해운대"));
+        GeocodingResult geocoded = new GeocodingResult(35.16, 129.16, "해운대해수욕장");
 
         lifecycleService.savePlace(job.getId(), extracted, geocoded);
 
         SavedPlace saved = savedPlaceRepository.findByUserOrderByCreatedAtDescIdDesc(job.getUser()).get(0);
         assertThat(saved.getDayNumber()).isEqualTo(2);
         assertThat(saved.getOrderInDay()).isEqualTo(3);
+        assertThat(saved.getPlaceName()).isEqualTo("해운대해수욕장");
+    }
+
+    @Test
+    void savePlace가_matchedName이_없으면_추출된_이름을_그대로_저장한다() {
+        ProcessingJob job = newJob();
+        ExtractedPlace extracted =
+                new ExtractedPlace("광알리", "부산", "attraction", 0.6, null, null, List.of("광알리"));
+        GeocodingResult geocoded = new GeocodingResult(35.17, 129.07, null);
+
+        lifecycleService.savePlace(job.getId(), extracted, geocoded);
+
+        SavedPlace saved = savedPlaceRepository.findByUserOrderByCreatedAtDescIdDesc(job.getUser()).get(0);
+        assertThat(saved.getPlaceName()).isEqualTo("광알리");
     }
 }

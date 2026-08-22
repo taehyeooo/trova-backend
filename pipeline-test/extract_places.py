@@ -55,7 +55,11 @@ FILTER_PROMPT = """당신은 여행 영상 자막/음성/화면 텍스트에서 
 소개됐는지)를 채우세요. 일정형이 아니면 두 필드 모두 null로 두세요.
 
 각 항목은 다음 필드를 가집니다:
-- name: 장소의 고유 이름
+- name: 장소의 고유 이름 (가장 확신하는 표기)
+- nameCandidates: name의 대안 철자 후보 배열. 자막/음성/화면 텍스트 인식이 헷갈릴 수 있는
+  이름이면(예: 발음이 비슷한 다른 글자로도 들릴 수 있음) 대안 표기를 함께 담으세요.
+  예: name이 "하늘기"인데 "하늘길"일 수도 있다면 ["하늘기", "하늘길"]. name 자체를
+  포함해서 최대 3개까지. 확실해서 대안이 필요 없으면 [name]처럼 name 하나만 담으세요.
 - region: 알 수 있는 상위 지역/도시명 (모르면 null)
 - category: "restaurant" | "cafe" | "attraction" | "lodging" | "shopping" | "other" 중 하나
 - confidence: 0~1 사이 숫자 (얼마나 확실한 장소명인지)
@@ -136,6 +140,17 @@ def _normalize_day_fields(places: list[dict]) -> list[dict]:
                 place[key] = int(value)
             except (TypeError, ValueError):
                 place[key] = None
+    return places
+
+
+def _normalize_name_candidates(places: list[dict]) -> list[dict]:
+    """nameCandidates가 없거나 배열이 아니거나 비어 있으면 [name] 하나로 대체한다 —
+    지오코딩 재시도 후보 목록이 비어서 검색을 아예 못 도는 일이 없도록 한다.
+    """
+    for place in places:
+        candidates = place.get("nameCandidates")
+        if not isinstance(candidates, list) or not candidates:
+            place["nameCandidates"] = [place.get("name")]
     return places
 
 
@@ -231,7 +246,7 @@ def extract_places(
         places = json.loads(text)
     except json.JSONDecodeError:
         raise SystemExit(f"Gemini did not return valid JSON (2단계): {text[:500]}")
-    return _normalize_day_fields(places)
+    return _normalize_name_candidates(_normalize_day_fields(places))
 
 
 if __name__ == "__main__":

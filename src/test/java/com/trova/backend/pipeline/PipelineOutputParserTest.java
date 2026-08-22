@@ -104,6 +104,38 @@ class PipelineOutputParserTest {
     }
 
     @Test
+    void nameCandidates가_있으면_함께_파싱된다() {
+        String stdout = """
+                {
+                  "title": "인천 여행",
+                  "places": [
+                    {"name": "하늘기", "region": "인천", "category": "attraction", "confidence": 0.6, "nameCandidates": ["하늘기", "하늘길"]}
+                  ]
+                }
+                """;
+
+        List<ExtractedPlace> places = PipelineOutputParser.parse(stdout).places();
+
+        assertThat(places.get(0).nameCandidates()).containsExactly("하늘기", "하늘길");
+    }
+
+    @Test
+    void nameCandidates가_없으면_name_하나로_기본값이_채워진다() {
+        String stdout = """
+                {
+                  "title": "인천 여행",
+                  "places": [
+                    {"name": "청라역", "region": "인천", "category": "attraction", "confidence": 0.95}
+                  ]
+                }
+                """;
+
+        List<ExtractedPlace> places = PipelineOutputParser.parse(stdout).places();
+
+        assertThat(places.get(0).nameCandidates()).containsExactly("청라역");
+    }
+
+    @Test
     void dayNumber와_orderInDay가_없으면_null로_파싱된다() {
         String stdout = """
                 {

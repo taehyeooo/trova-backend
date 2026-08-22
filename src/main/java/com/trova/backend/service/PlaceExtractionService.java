@@ -41,7 +41,8 @@ public class PlaceExtractionService {
             lifecycleService.setTitle(jobId, output.title());
 
             for (ExtractedPlace extracted : output.places()) {
-                GeocodingResult geocoded = kakaoGeocodingService.geocode(extracted.name(), extracted.region());
+                GeocodingResult geocoded =
+                        kakaoGeocodingService.geocode(extracted.nameCandidates(), extracted.region());
                 lifecycleService.savePlace(jobId, extracted, geocoded);
             }
 
